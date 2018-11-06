@@ -19,10 +19,9 @@ def trigger_job(job, params):
             job_name=job),
         params=params,
         auth=(JENKINS_USER, JENKINS_TOKEN))
-    assert response.status_code == 201
-    queue_id = _get_queue_id_from_location_url(response.headers['Location'])
-    assert queue_id is not None
-    return queue_id
+    if response.status_code != 201 or 'Location' not in response.headers:
+        raise RuntimeError("Job can't be started")
+    return _get_queue_id_from_location_url(response.headers['Location'])
 
 
 def _get_queue_id_from_location_url(location_url):

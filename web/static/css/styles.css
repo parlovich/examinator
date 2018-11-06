@@ -1,0 +1,72 @@
+body {
+  font-family: Salesforce Sans,Arial,sans-serif;
+  line-height: 1.5;
+  color: #16325c;
+  background: #d8edff;
+}
+
+h1 {
+  font-size: 1.5em;
+  float: left;
+}
+
+table.tasks {
+    font-size: 13px;
+    display: table;
+    width: 100%;
+    border-collapse: separate;
+    border-top: 1px solid #d8dde6;
+    border-bottom: 1px solid #d8dde6;
+    background-color: #fdfdfd;
+    border-spacing: 0;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+
+.tasks td, .tasks th {
+    text-align: left;
+    padding: .5rem;
+    white-space: nowrap;
+    position: relative;
+    border-top: 1px solid #d8dde6;
+}
+
+.tasks td {
+    vertical-align: top;
+}
+
+input.repo {
+    width: 100%;
+}
+
+button.submit {
+    position: relative;
+    display: inline-block;
+    padding: 0;
+    background: transparent;
+    background-clip: border-box;
+    border-radius: .25rem;
+    font-size: .75rem;
+    line-height: 1.875rem;
+    -webkit-appearance: none;
+    white-space: normal;
+    user-select: none;
+    transition: color .05s linear,background-color .05s linear;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    text-align: center;
+    border: 1px solid #d8dde6;
+    cursor: pointer;
+}
+
+div.testReport {
+    font-family: monospace;
+    color: black;
+    margin: 10px;
+}
+
+input.repo {
+    font-size: 13px;
+}

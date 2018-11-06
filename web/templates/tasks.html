@@ -1,10 +1,58 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Tasks</title>
-</head>
-<body>
-    Hello world
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}Check tasks{% endblock %}
+
+{% block content %}
+<h1>Check your task</h1>
+
+<script type="text/javascript">
+    $(document).ready(function(){
+        $(".submit").click(function(){
+            var btn = $(this)
+            var task = btn.data('params');
+            var repo_id =  task + "_repo";
+            var report_id = "test_report_" + task;
+            var display_func = function(response){
+                    $("#" + report_id).html(response);
+                    btn.prop("disabled", false);
+                }
+            btn.prop("disabled", true);
+            $("#" + report_id).html("Running tests...")
+            $.ajax({
+                url: "task/check",
+                data: {
+                    task: task,
+                    repo: $("#" + repo_id).val()
+                },
+                success: display_func,
+                error: display_func
+            });
+        });
+    });
+</script>
+
+<table class="tasks">
+    <tr>
+        <th>TASK</th>
+        <th>REPO</th>
+        <th>SUBMIT</th>
+    </tr>
+    {% for task in tasks %}
+    <tr>
+        <td class="task"><a href="{{ task.repo }}">{{ task.name }}</a></td>
+        <td>
+            <div>
+                <div>Choose repo</div>
+                <input class="repo" id="{{task.id}}_repo">
+            </div>
+            <div id="test_report_{{task.id}}" class="testReport">
+            </div>
+        </td>
+        <td>
+            <button class="submit" type="button" data-params="{{task.id}}">Submit</button>
+        </td>
+    </tr>
+    {% endfor %}
+
+</table>
+{% endblock %}
