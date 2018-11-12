@@ -6,7 +6,7 @@ import re
 import time
 import pprint
 
-JENKINS_URL = "http://54.84.104.217:8080"
+JENKINS_URL = "http://54.84.204.7:8080"
 JENKINS_USER = "admin"
 JENKINS_TOKEN = "117654622048d9c2779c573b625c416ccc"  # Generate token via Jenkins UI
 JENKINS_JOB_REPO_PARAM_NAME = "REPO_URL"
@@ -76,12 +76,10 @@ def wait_for_job_to_complete(job, job_id, interval=1, max_retries=120):
         job=job,
         job_id=job_id
     )
-    response = requests.get(job_url, auth=(JENKINS_USER, JENKINS_TOKEN))
+    response = get_resource(job_url)
     retry = 1
     while True:
-        response.raise_for_status()
-
-        if not response.json()["building"]:
+        if not response["building"]:
             break
 
         retry += 1
@@ -89,17 +87,20 @@ def wait_for_job_to_complete(job, job_id, interval=1, max_retries=120):
             raise RuntimeError("Waiting for build to start timeout")
 
         time.sleep(interval)
-        response = requests.get(job_url, auth=(JENKINS_USER, JENKINS_TOKEN))
+        response = get_resource(job_url)
 
 
 def get_job(job, job_id):
-    response = requests.get(
+    return get_resource(
         "{jenkins_url}/job/{job}/{job_id}/api/json".format(
             jenkins_url=JENKINS_URL,
             job=job,
-            job_id=job_id),
-        auth=(JENKINS_USER, JENKINS_TOKEN)
+            job_id=job_id)
     )
+
+
+def get_resource(url):
+    response = requests.get(url, auth=(JENKINS_USER, JENKINS_TOKEN))
     response.raise_for_status()
     return response.json()
 

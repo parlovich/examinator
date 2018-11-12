@@ -9,10 +9,11 @@ from tasks import TASKS
 import jenkins_api
 
 SECURITY_ENABLED = False
-NON_SECURE_ENDPOINTS = ("github.login")
+GITHUB_CLIENT_ID = "d560b12f5bc9453309ae"
+GITHUB_SECRET = "71fd5f824fcac8cf4d5fe0af34a16e820dd8cb9a"
 
-GITHUB_CLIENT_ID = ""
-GITHUB_SECRET = ""
+# TODO enable ssl
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
@@ -27,17 +28,16 @@ app.register_blueprint(blueprint, url_prefix="/login")
 @app.before_request
 def before_request():
     print("Request: %s" % request.endpoint)
-
-    if not SECURITY_ENABLED or \
-            request.endpoint in NON_SECURE_ENDPOINTS:
+    if not SECURITY_ENABLED:
         return
 
-    if not github.authorized:
-        return redirect(url_for("github.login"))
+    if request.endpoint and request.endpoint == "tasks":
+        if not github.authorized:
+            return redirect(url_for("github.login"))
 
-    resp = github.get("/user")
-    assert resp.ok
-    print "You are @{login} on GitHub".format(login=resp.json()["login"])
+        resp = github.get("/user")
+        assert resp.ok
+        print "You are @{login} on GitHub".format(login=resp.json()["login"])
 
 
 @app.route('/tasks')
@@ -76,32 +76,57 @@ def get_task_by_id(task_id):
 
 def create_execution_report(task, job_id):
     job = jenkins_api.get_job(task["jenkins_job"], job_id)
+
+    if task["type"] in ("java", "net"):
+        return get_test_report_junit(job)
+    elif task["type"] == "js":
+        return get_test_report_js(job)
+    return get_test_report_default(job)
+
+
+def get_test_report_default(job):
+    return "Duration: %s sec.<br/>" \
+           "%s" % (job["duration"] / 1000, job["result"])
+
+
+def get_test_report_junit(job):
     duration = job["duration"] / 1000
-    if "FAILURE" == job["result"]:
-        return "Duration: %s sec.<br/>" \
-               "Error occurred while running tests" % duration
-    else:
-        status = "All tests passed" if "SUCCESS" == job["result"] else "Not all tests passed"
-
-        # TODO process test results for other type of projects
-        total, failed, skipped = get_test_results_java(job)
-
-        return "Duration: %s sec.<br/>" \
-               "%s<br/>" \
-               "----------------------<br/>" \
-               "Total number of tests: %d<br/>" \
-               "Failed tests: %d<br/>" \
-               "Skipped tests: %d" % (duration, status, total, failed, skipped)
+    test_report = [a for a in job["actions"]
+                      if "_class" in a and a["_class"] in ("hudson.tasks.junit.TestResultAction", "hudson.maven.reporters.SurefireAggregatedReport")]
+    if test_report:
+        test_report = test_report[0]
+    status = "<div style='color:green;'>OK</div>" if "SUCCESS" == job["result"] else \
+        "<div style='color:red;'>FAILED</div>" if test_report else \
+        "<div style='color:red;'>ERROR: can't run tests</div>"
+    report = "%s\n"\
+        "Duration: %s sec." % (status, duration)
+    if test_report and "SUCCESS" != job["result"]:
+        report = "%s\n<br/>\n%s" % (report, generate_junit_report(job, test_report))
+    return report
 
 
-def get_test_results_java(job):
-    surfire_report = [a for a in job["actions"]
-                      if "_class" in a and a["_class"] == "hudson.maven.reporters.SurefireAggregatedReport"]
-    if surfire_report:
-        return (surfire_report[0]["totalCount"],
-                surfire_report[0]["failCount"],
-                surfire_report[0]["skipCount"])
+def get_test_report_js(job):
+    # TODO implement JS specific report
+    return get_test_report_default()
+
+
+def generate_junit_report(job, action):
+    report = jenkins_api.get_resource(job["url"] + action["urlName"] + "/api/json")
+    failed_tests = []
+    if "suites" in report:
+        for suite in report["suites"]:
+            if "cases" in suite:
+                for case in suite["cases"]:
+                    if not case["skipped"] and case["status"] != "PASSED":
+                        failed_tests.append((case["className"] + "." + case["name"], case["errorDetails"]))
+    result = ""
+    if failed_tests:
+        result = "-----------------------------\n<br/>\n" \
+                 "Test failed %d out of %d:\n<br/>\n" \
+                 "%s" % (action["failCount"], action["totalCount"],
+                         "<br/>".join(["%s: %s" % (name, error) for name, error in failed_tests]))
+    return result
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port="80")
+    app.run(host="0.0.0.0", port="8080")
