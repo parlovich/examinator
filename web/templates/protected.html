@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<div class="header">
+    {{ current_user.id }}
+    <a href="/logout">logout</a>
+</div>
+<div class="content">
+    {% block content %}{% endblock %}
+</div>
+{% endblock %}

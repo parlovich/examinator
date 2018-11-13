@@ -3,11 +3,22 @@ body {
   line-height: 1.5;
   color: #16325c;
   background: #d8edff;
+  display: grid;
 }
 
 h1 {
   font-size: 1.5em;
   float: left;
+}
+
+.welcome {
+  font-size: 1.5em;
+  float: left;
+  text-align: center;
+}
+
+.header {
+  text-align: right;
 }
 
 table.tasks {

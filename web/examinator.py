@@ -5,12 +5,15 @@ from flask import Flask, session, \
     redirect, url_for, escape, request, render_template
 from werkzeug.contrib.fixers import ProxyFix
 from flask_dance.contrib.github import make_github_blueprint, github
+from flask_dance.consumer import oauth_authorized
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+
 from tasks import TASKS
 import jenkins_api
 
 SECURITY_ENABLED = False
-GITHUB_CLIENT_ID = "d560b12f5bc9453309ae"
-GITHUB_SECRET = "71fd5f824fcac8cf4d5fe0af34a16e820dd8cb9a"
+GITHUB_CLIENT_ID = ""
+GITHUB_SECRET = ""
 
 # TODO enable ssl
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -18,34 +21,71 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
 app.secret_key = os.urandom(12)
-blueprint = make_github_blueprint(
-    client_id=GITHUB_CLIENT_ID,
-    client_secret=GITHUB_SECRET,
-)
-app.register_blueprint(blueprint, url_prefix="/login")
+
+github_blueprint = make_github_blueprint(client_id=GITHUB_CLIENT_ID, client_secret=GITHUB_SECRET)
+app.register_blueprint(github_blueprint, url_prefix="/login")
+
+login_manager = LoginManager(app)
+login_manager.login_view = "/"
 
 
-@app.before_request
-def before_request():
-    print("Request: %s" % request.endpoint)
-    if not SECURITY_ENABLED:
-        return
+class User(UserMixin):
+    def __init__(self, id):
+        self.id = id
 
-    if request.endpoint and request.endpoint == "tasks":
+
+@login_manager.user_loader
+def load_user(id):
+    return User(id)
+
+
+@oauth_authorized.connect
+def github_logged_in(blueprint, token):
+    resp = blueprint.session.get("/user")
+    assert resp.ok
+    resp_json = resp.json()
+    print "Login as @{login}".format(login=resp_json["login"])
+    login_user(User(resp_json["login"]))
+
+
+@app.route('/login')
+def login():
+    if not current_user.is_authenticated:
         if not github.authorized:
             return redirect(url_for("github.login"))
 
         resp = github.get("/user")
         assert resp.ok
-        print "You are @{login} on GitHub".format(login=resp.json()["login"])
+        user = resp.json()["login"]
+        print "Login as @{login}".format(login=user)
+
+        login_user(User(user))
+
+    return redirect(url_for(".tasks"))
+
+
+@app.route('/logout')
+def logout():
+    if current_user.is_authenticated:
+        logout_user()
+    return redirect("/")
+
+
+@app.route('/')
+def welcome():
+    if current_user.is_authenticated:
+        return redirect(url_for(".tasks"))
+    return render_template("welcome.html")
 
 
 @app.route('/tasks')
+@login_required
 def tasks():
     return render_template("tasks.html", tasks=TASKS)
 
 
 @app.route('/task/check', methods=['GET'])
+@login_required
 def verify_task():
     try:
         task = get_task_by_id(request.args.get("task"))
@@ -77,10 +117,8 @@ def get_task_by_id(task_id):
 def create_execution_report(task, job_id):
     job = jenkins_api.get_job(task["jenkins_job"], job_id)
 
-    if task["type"] in ("java", "net"):
+    if task["type"] in ("java", "net", "js"):
         return get_test_report_junit(job)
-    elif task["type"] == "js":
-        return get_test_report_js(job)
     return get_test_report_default(job)
 
 
