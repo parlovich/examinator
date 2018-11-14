@@ -5,7 +5,16 @@ TASKS = [
         "name": "JAVA: Warmup",
         "type": "java",
         "repo": "https://github.com/parlovich/warmupjava",
-        "jenkins_job": "warmup-java-pipeline"
+        "test_repo": "https://github.com/parlovich/warmupjava-test",
+        "jenkins_job": "java-pipeline"
+    },
+    {
+        "id": "calc_java",
+        "name": "JAVA: Calculator",
+        "type": "java",
+        "repo": "https://github.com/parlovich/calc",
+        "test_repo": "https://github.com/parlovich/calc-test",
+        "jenkins_job": "java-pipeline"
     },
     {
         "id": "custom_validator",

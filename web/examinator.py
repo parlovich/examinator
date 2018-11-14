@@ -91,7 +91,7 @@ def verify_task():
         task = get_task_by_id(request.args.get("task"))
         job = task["jenkins_job"]
         repo = request.args.get("repo")
-        queue_id = jenkins_api.trigger_job(job, {"REPO_URL": repo})
+        queue_id = jenkins_api.trigger_job(job, _get_job_params(task, repo))
         print "Job '%s' is added to queue. Queue id: %d" % (job, queue_id)
 
         print "Waiting for job '%s' to run..." % job
@@ -105,6 +105,17 @@ def verify_task():
         return create_execution_report(task, job_id)
     except Exception as e:
         return "ERROR: %s" % e
+
+
+def _get_job_params(task, repo):
+    params = {
+        "USER_ID": current_user.id,
+        "TASK": task["id"],
+        "REPO_URL": repo
+    }
+    if task["type"] == "java":
+        params["TEST_REPO_URL"] = task["test_repo"]
+    return params
 
 
 def get_task_by_id(task_id):
