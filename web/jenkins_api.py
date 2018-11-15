@@ -6,7 +6,7 @@ import re
 import time
 import pprint
 
-JENKINS_URL = "http://54.84.204.7:8080"
+JENKINS_URL = "http://52.90.189.123:8080"
 JENKINS_USER = "admin"
 JENKINS_TOKEN = "117654622048d9c2779c573b625c416ccc"  # Generate token via Jenkins UI
 JENKINS_JOB_REPO_PARAM_NAME = "REPO_URL"

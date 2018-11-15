@@ -12,6 +12,7 @@ from tasks import TASKS
 import jenkins_api
 
 SECURITY_ENABLED = False
+
 GITHUB_CLIENT_ID = ""
 GITHUB_SECRET = ""
 
@@ -113,7 +114,7 @@ def _get_job_params(task, repo):
         "TASK": task["id"],
         "REPO_URL": repo
     }
-    if task["type"] == "java":
+    if task["type"] in ("java", "js"):
         params["TEST_REPO_URL"] = task["test_repo"]
     return params
 

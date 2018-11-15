@@ -2,7 +2,7 @@ node {
     properties([
             parameters([
                     string(name: 'USER_ID', description: 'the student name'),
-                    string(name: 'TASK', description: 'name of the task the student is truing to implement'),
+                    string(name: 'TASK', description: 'name of the task the student is trying to implement'),
                     string(name: 'REPO_URL', description: 'git repo with the student\'s implementation'),
                     string(name: 'TEST_REPO_URL', description: 'git repo with the tests to the task')
             ])
