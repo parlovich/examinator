@@ -26,15 +26,19 @@ node {
         checkout([$class           : 'GitSCM',
                   branches         : [[name: '*/master']],
                   userRemoteConfigs: [[url: '$REPO_URL']],
-                  depth            : 1,
-                  extensions       : [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${sources_dir}"]]
+                  extensions       : [
+                          [$class: 'CloneOption', noTags: true, reference: '', shallow: true],
+                          [$class: 'RelativeTargetDirectory', relativeTargetDir: "${sources_dir}"]
+                  ]
         ])
         // Git clone unittests for the task to ${tests_dir} directory
         checkout([$class           : 'GitSCM',
                   branches         : [[name: '*/master']],
                   userRemoteConfigs: [[url: '$TEST_REPO_URL']],
-                  depth            : 1,
-                  extensions       : [[$class: 'RelativeTargetDirectory', relativeTargetDir: "${tests_dir}"]]
+                  extensions       : [
+                          [$class: 'CloneOption', noTags: true, reference: '', shallow: true],
+                          [$class: 'RelativeTargetDirectory', relativeTargetDir: "${tests_dir}"]
+                  ]
         ])
     }
     stage('Test') {
