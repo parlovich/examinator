@@ -48,6 +48,14 @@ table.tasks {
     vertical-align: top;
 }
 
+th.task {
+    width: 25%
+}
+
+th.submit {
+    width: 90px
+}
+
 input.repo {
     width: 100%;
 }
