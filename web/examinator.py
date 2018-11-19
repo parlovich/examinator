@@ -1,6 +1,7 @@
 #! /usr/bin/python
 
 import os
+import logging
 from flask import Flask, session, \
     redirect, url_for, escape, request, render_template
 from werkzeug.contrib.fixers import ProxyFix
@@ -45,7 +46,7 @@ def github_logged_in(blueprint, token):
     resp = blueprint.session.get("/user")
     assert resp.ok
     resp_json = resp.json()
-    print "Login as @{login}".format(login=resp_json["login"])
+    logging.info("Login as @{login}".format(login=resp_json["login"]))
     login_user(User(resp_json["login"]))
 
 
@@ -58,7 +59,7 @@ def login():
         resp = github.get("/user")
         assert resp.ok
         user = resp.json()["login"]
-        print "Login as @{login}".format(login=user)
+        logging.info("Login as @{login}".format(login=user))
 
         login_user(User(user))
 
@@ -68,6 +69,7 @@ def login():
 @app.route('/logout')
 def logout():
     if current_user.is_authenticated:
+        logging.info("Logout @{login}".format(login=current_user.id))
         logout_user()
     return redirect("/")
 
@@ -89,22 +91,32 @@ def tasks():
 @login_required
 def verify_task():
     try:
+        if "task" not in request.args:
+            raise RuntimeError("Invalid request. 'task' argument is missing")
         task = get_task_by_id(request.args.get("task"))
-        job = task["jenkins_job"]
+        if not task:
+            raise RuntimeError("Invalid request. 'task' argument is invalid")
+        logging.info("User '%s', checks task '%s'" % (current_user.id, str(task)))
+        jenkins_job = task["jenkins_job"]
+        if "repo" not in request.args:
+            raise RuntimeError("Invalid request. 'repo' argument is missing")
         repo = request.args.get("repo")
-        queue_id = jenkins_api.trigger_job(job, _get_job_params(task, repo))
-        print "Job '%s' is added to queue. Queue id: %d" % (job, queue_id)
+        params = _get_job_params(task, repo)
+        logging.info("Run Jenkins job '%s', params: '%s'" % (jenkins_job, str(params)))
+        queue_id = jenkins_api.trigger_job(jenkins_job, params)
+        logging.info("Job '%s' is added to queue. Queue id: %d" % (jenkins_job, queue_id))
 
-        print "Waiting for job '%s' to run..." % job
-        job_id = jenkins_api.wait_for_job_to_execute(job, queue_id)
-        print "Job '%s' has been started. Job id: %d" % (job, job_id)
+        logging.info("Waiting for job '%s', queue id '%s' to run..." % (jenkins_job, queue_id))
+        job_id = jenkins_api.wait_for_job_to_execute(jenkins_job, queue_id)
+        logging.info("Job '%s', queue id '%s' has been started. Job id: %d" % (jenkins_job, queue_id, job_id))
 
-        print "Waiting for job '%s' to complete..." % job
-        jenkins_api.wait_for_job_to_complete(job, job_id)
-        print "Job '%s' has been finished." % job
+        logging.info("Waiting for job '%s', queue id '%s' to complete..." % (jenkins_job, queue_id))
+        jenkins_api.wait_for_job_to_complete(jenkins_job, job_id)
+        logging.info("Job '%s', queue id '%s'  has been finished." % (jenkins_job, queue_id))
 
         return create_execution_report(task, job_id)
     except Exception as e:
+        logging.traceback.print_exc()
         return "ERROR: %s" % e
 
 
@@ -179,4 +191,9 @@ def generate_junit_report(job, action):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        format='%(asctime)s %(levelname)-8s %(message)s',
+        level=logging.INFO,
+        datefmt='%Y-%m-%d %H:%M:%S')
+
     app.run(host="0.0.0.0", port="8080")

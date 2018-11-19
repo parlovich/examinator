@@ -28,7 +28,7 @@ def _get_queue_id_from_location_url(location_url):
     return int(filter(len, location_url.split("/"))[-1])
 
 
-def wait_for_job_to_execute(job, queue_id, interval=1, max_retries=60):
+def wait_for_job_to_execute(job, queue_id, interval=2, max_retries=60):
     queue_item_url = '{jenkins_url}/queue/item/{queue_id}/api/json'.format(
         jenkins_url=JENKINS_URL,
         queue_id=queue_id
@@ -44,7 +44,9 @@ def wait_for_job_to_execute(job, queue_id, interval=1, max_retries=60):
             raise RuntimeError("Error while executing '%s' build. Build was cancelled" % job)
 
         if 'executable' in queue_item:
-            return queue_item["executable"]["number"]
+            executable = queue_item["executable"]
+            if executable and 'number' in executable:
+                return executable["number"]
 
         retry += 1
         if retry > max_retries:
@@ -70,7 +72,7 @@ def _get_job_id_by_queue_id(job, queue_id):
     return job_id
 
 
-def wait_for_job_to_complete(job, job_id, interval=1, max_retries=120):
+def wait_for_job_to_complete(job, job_id, interval=5, max_retries=120):
     job_url = '{jenkins_url}/job/{job}/{job_id}/api/json?tree=building'.format(
         jenkins_url=JENKINS_URL,
         job=job,
