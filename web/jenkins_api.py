@@ -5,11 +5,11 @@ import requests
 import re
 import time
 import pprint
+import json
 
 JENKINS_URL = "http://52.90.189.123:8080"
 JENKINS_USER = "admin"
 JENKINS_TOKEN = "117654622048d9c2779c573b625c416ccc"  # Generate token via Jenkins UI
-JENKINS_JOB_REPO_PARAM_NAME = "REPO_URL"
 
 
 def trigger_job(job, params):
@@ -111,16 +111,17 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run Jenkins job and wait till the execution is complete")
     parser.add_argument("--job", dest="job", required=True, type=str,
                         help="Name of the job to execute")
-    parser.add_argument("--repo", dest="repo", required=True, type=str,
-                        help="Url to GitHub repository")
+    parser.add_argument("--params", dest="params", required=True, type=str,
+                        help="JSON representing job parameters, ex.: {\\\"REPO_URL\\\": \\\"https://github.com/user/repo\\\",..}")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    print "Trigger Jenkins job '%s' ..." % args.job
+    params = json.loads(args.params)
+    print "Trigger Jenkins job '%s' with params: %s ..." % (args.job, str(params))
 
-    queue_id = trigger_job(args.job, {"REPO_URL": args.repo})
+    queue_id = trigger_job(args.job, params)
     print "Job is added to queue. Queue id: %d" % queue_id
 
     print "Waiting for job to run..."
